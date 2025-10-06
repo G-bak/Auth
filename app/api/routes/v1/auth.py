@@ -10,7 +10,6 @@ from app.domain import AuthService, UserEntity
 from app.schemas import LoginRequest, RegisterRequest, Token, UserRead
 
 router = APIRouter()
-settings = get_settings()
 
 
 def _to_user_read(user: UserEntity) -> UserRead:
@@ -39,8 +38,10 @@ def login(payload: LoginRequest, response: Response, auth_service: AuthService =
         _, token = auth_service.authenticate(email=payload.email, password=payload.password)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
-    expires_at = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
-    response.set_cookie("access_token", token, httponly=True, max_age=settings.access_token_expire_minutes * 60)
+    settings = get_settings()
+    expires_minutes = settings.access_token_expire_minutes
+    expires_at = datetime.utcnow() + timedelta(minutes=expires_minutes)
+    response.set_cookie("access_token", token, httponly=True, max_age=int(expires_minutes * 60))
     return Token(access_token=token, expires_at=expires_at)
 
 
