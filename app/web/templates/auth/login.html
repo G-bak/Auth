@@ -1,0 +1,17 @@
+{% extends "shared/base.html" %}
+{% block title %}로그인 - Auth Service{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>로그인</h2>
+  <form method="post">
+    <label for="email">이메일</label>
+    <input type="email" id="email" name="email" required />
+    <label for="password">비밀번호</label>
+    <input type="password" id="password" name="password" required minlength="8" />
+    <button type="submit">로그인</button>
+  </form>
+  <p class="text-muted">
+    아직 계정이 없나요? <a href="/auth/register">회원가입</a>
+  </p>
+</section>
+{% endblock %}

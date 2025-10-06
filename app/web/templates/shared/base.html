@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Auth Service{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/auth.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="container">
+        <h1><a href="/">Auth Service</a></h1>
+        <nav>
+          <a href="/auth/login">로그인</a>
+          <a href="/auth/register">회원가입</a>
+          <a href="/dashboard">대시보드</a>
+        </nav>
+      </div>
+    </header>
+    <main class="container">
+      {% include "shared/flash.html" %}
+      {% block content %}{% endblock %}
+    </main>
+    <script src="/static/js/auth.js"></script>
+  </body>
+</html>

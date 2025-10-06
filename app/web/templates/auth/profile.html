@@ -1,0 +1,18 @@
+{% extends "shared/base.html" %}
+{% block title %}프로필 - Auth Service{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>프로필 정보</h2>
+  <dl class="profile-list">
+    <dt>이메일</dt>
+    <dd>{{ user.email.value }}</dd>
+    <dt>이름</dt>
+    <dd>{{ user.full_name or '미등록' }}</dd>
+    <dt>가입일</dt>
+    <dd>{{ user.created_at }}</dd>
+    <dt>권한 레벨</dt>
+    <dd>{{ user.role_levels | join(', ') }}</dd>
+  </dl>
+  <a class="button" href="/dashboard">대시보드로 돌아가기</a>
+</section>
+{% endblock %}

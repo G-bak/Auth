@@ -1,0 +1,11 @@
+{% extends "shared/base.html" %}
+{% block title %}대시보드 - Auth Service{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>환영합니다, {{ user.full_name or user.email.value }}님!</h2>
+  <p>현재 권한 레벨: <strong>{{ (user.role_levels or [0]) | max }}</strong></p>
+  <p>토큰 만료까지: {{ expires_in.total_seconds() // 60 }}분</p>
+  <a class="button" href="/auth/profile">내 프로필</a>
+  <a class="button button-secondary" href="/auth/logout">로그아웃</a>
+</section>
+{% endblock %}

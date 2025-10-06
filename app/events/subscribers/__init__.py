@@ -1,0 +1,1 @@
+"""Subscriber registry placeholder for future integrations."""
