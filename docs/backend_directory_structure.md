@@ -4,6 +4,7 @@
 - **목표**: 회원가입, 로그인, 로그아웃, 토큰 관리 등 계정 기능을 독립 서비스로 개발하여 다양한 사내 시스템에서 공통으로 활용할 수 있도록 함.
 - **핵심 가치**: 마이크로서비스 관점의 확장성, 기능별 책임 분리, 테스트 및 배포 자동화 용이성, 도메인 주도 설계를 고려한 모듈화.
 - **전제**: FastAPI + SQLAlchemy (또는 비동기 ORM), 메시지 큐(옵션), CI/CD 환경, 인프라 환경(예: Kubernetes, Docker)과의 연동.
+- **UI 전략**: 동일 서비스 내에서 로그인/회원가입 페이지를 SSR 방식으로 제공하여 빠른 온보딩을 돕고, 차후 별도 프론트엔드와 연동할 때는 API·웹 라우터를 분리 배포할 수 있도록 설계.
 
 ## 2. 디렉토리 구조
 ```
@@ -56,6 +57,24 @@ AuthService/
 │   │   ├── user.py
 │   │   ├── permission.py
 │   │   └── __init__.py
+│   ├── web/
+│   │   ├── routes/
+│   │   │   ├── __init__.py
+│   │   │   └── auth.py
+│   │   ├── templates/
+│   │   │   ├── auth/
+│   │   │   │   ├── login.html
+│   │   │   │   └── register.html
+│   │   │   └── shared/
+│   │   │       ├── base.html
+│   │   │       └── flash.html
+│   │   ├── static/
+│   │   │   ├── css/
+│   │   │   │   └── auth.css
+│   │   │   ├── js/
+│   │   │   │   └── auth.js
+│   │   │   └── images/
+│   │   └── __init__.py
 │   ├── utils/
 │   │   ├── password.py
 │   │   ├── jwt.py
@@ -71,6 +90,7 @@ AuthService/
 │   ├── api/
 │   ├── domain/
 │   ├── e2e/
+│   ├── web/
 │   └── conftest.py
 ├── scripts/
 │   ├── prestart.sh
@@ -111,21 +131,29 @@ AuthService/
 ### 3.6 app/utils
 - 재사용 가능한 유틸 함수. 암호 해시, JWT 생성/검증, 시간 관련 도구 등.
 
-### 3.7 app/events
+### 3.7 app/web
+- 인증 UI를 FastAPI 애플리케이션 내부에서 바로 제공하기 위한 계층.
+- **routes**: `/signup`, `/login`, `/logout` 등 브라우저 요청을 처리하는 라우터. 폼 데이터 유효성 검증 후 `auth_service`, `user_service`를 호출하여 회원가입/로그인을 처리하고, 쿠키 기반 세션 혹은 JWT 발급 후 리디렉션을 수행.
+- **templates**: Jinja2 기반 템플릿. `auth/login.html`, `auth/register.html`에서 공통 레이아웃(`shared/base.html`)을 상속받고, CSRF 토큰 삽입, 에러 메시지 노출(`shared/flash.html`)을 포함.
+- **static**: UI 리소스(CSS, JS, 이미지). `css/auth.css`는 반응형 폼 스타일링, `js/auth.js`는 클라이언트 측 유효성 검사나 UX 향상을 위한 인터랙션을 담당.
+- FastAPI `StaticFiles`, `Jinja2Templates`를 초기화하는 헬퍼를 `app/web/__init__.py` 또는 전용 팩토리 함수로 제공하여 `main.py`에서 쉽게 마운트.
+
+### 3.8 app/events
 - 이벤트 기반 확장을 위한 구조. 예: 사용자 가입 시 메시지 큐(Kafka, RabbitMQ) 발행.
 - **publishers/subscribers** 디렉토리로 나눠 확장성 확보.
 - `publishers/permission_events.py`로 권한 변경, 감사 로깅, 이상 징후 알림 이벤트를 발행.
 
-### 3.8 tests
+### 3.9 tests
 - **api**: 라우트 단위 테스트.
 - **domain**: 도메인 서비스, 엔티티 테스트.
 - **e2e**: 실제 API 엔드포인트 통합 테스트. TestClient 또는 HTTPX 활용.
+- **web**: 로그인/회원가입 페이지 렌더링 및 폼 제출 시나리오 테스트. FastAPI TestClient로 서버 사이드 렌더링 응답 상태, CSRF 토큰 존재 여부, 폼 유효성 검사 메시지 등을 검증. 필요 시 Playwright/Selenium으로 브라우저 기반 테스트 확장.
 - pytest 기반 설정을 위한 `conftest.py` 포함.
 
-### 3.9 scripts
+### 3.10 scripts
 - 컨테이너 시작 전 실행되는 스크립트(prestart), DB 초기화, OpenAPI 문서 자동 생성 등 운영 편의 스크립트.
 
-### 3.10 루트 파일
+### 3.11 루트 파일
 - `alembic.ini`: 마이그레이션 설정.
 - `pyproject.toml` 또는 `requirements.txt`: 패키지 관리.
 - `.env.example`: 환경 변수 템플릿.
@@ -157,7 +185,13 @@ AuthService/
 - 기존 사용자 라우터(`users.py`)에 권한 변경/조회 엔드포인트 추가.
 - OpenAPI 생성 스크립트(`scripts/generate_openapi.py`)에 권한 스키마 반영.
 
-### 4.5 보안 및 운영 고려사항
+### 4.5 웹 페이지 통합 전략
+- 로그인/회원가입 페이지는 `app/web/routes/auth.py`에서 관리하며 API 계층과 동일한 서비스/스키마를 활용해 중복 로직을 제거.
+- 세션/쿠키 기반 로그인 UX와 API 기반 JWT 인증을 동시에 지원하기 위해 `auth_service`에서 토큰 발급 방식을 추상화하고, 웹 라우터가 브라우저 친화적인 응답(HTML, 리디렉션, 플래시 메시지)을 제공하도록 설계.
+- CSRF 토큰 발급 및 검증 로직을 `app/web/routes` 또는 전용 `app/web/security.py`에서 제공하여 폼 요청 보호.
+- 템플릿에서 권한 레벨에 따라 UI 요소를 제어할 수 있도록 `request.state` 혹은 컨텍스트 프로세서를 통해 현재 사용자 권한을 주입.
+
+### 4.6 보안 및 운영 고려사항
 - `app/utils/jwt.py` 토큰에 권한 레벨과 정책 버전을 포함하여 정책 변경 시 토큰 무효화 전략 수립.
 - 중앙 감사 로그(예: ELK, Cloud Logging)에 권한 변경 이벤트 수집.
 - 권한 매트릭스 기반 테스트 케이스를 `tests/` 디렉토리에 추가하여 회귀 방지.
