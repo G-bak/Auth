@@ -14,7 +14,10 @@ class Settings(BaseSettings):
     secret_key: str = Field(..., description="JWT signing secret")
     access_token_expire_minutes: int = Field(30, ge=1, description="Default JWT expiry in minutes")
     algorithm: str = Field("HS256", description="JWT signing algorithm")
-    database_url: str = Field("sqlite:///./auth.db", description="Database connection URL")
+    database_url: str = Field(
+        "mysql+pymysql://user:password@localhost:3306/auth",
+        description="Database connection URL",
+    )
     allowed_hosts: List[str] = Field(default_factory=lambda: ["*"])
     superuser_email: str = Field("admin@example.com", description="Initial administrator email")
     superuser_password: str = Field("ChangeMe123!", description="Initial administrator password")
